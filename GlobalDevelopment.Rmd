@@ -1,0 +1,330 @@
+---
+title: "Make Countries Move"
+author: "Bo Hallum"
+date: "14/3/2025"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#  Explore global development with R
+In this exercise, you will load a filtered `gapminder` dataset -  with a subset of data on global development from 1952 - 2007 in increments of 5 years - to capture the period between the Second World War and the Global Financial Crisis. 
+
+**Your task: Explore the data and visualise it in both static and animated ways, providing answers and solutions to 7 questions/tasks within this script.** 
+
+- **Submit to Github this script with solutions and its knitted version.**  
+- **Submit to Brightspace a document with the (1) URL of this script and its knitted version in Github (2) answer of 250 words and a (3) visualisation of the Final Question**
+
+## Get the necessary packages
+First, start with installing and activating the relevant packages `tidyverse`, `gganimate`, and `gapminder` if you do not have them already. 
+*Pay attention to what warning messages you get when installing `gganimate`, as your computer might need other packages than `gifski` and `av`*
+
+```{r libraries}
+#install.packages("gganimate")
+#install.packages("gifski")
+#install.packages("gapminder")
+library(tidyverse)
+library(gganimate)
+library(gifski)
+library(gapminder)
+```
+
+## Look at the data and tackle the tasks
+First, see which specific years are actually represented in the dataset and what variables are being recorded for each country. Note that when you run the cell below, Rmarkdown will give you two results - one for each line - that you can flip between.
+```{r}
+str(gapminder)
+unique(gapminder$year)
+head(gapminder)
+
+gapminder %>% 
+  filter(year== 1952) %>% 
+  arrange(desc(gdpPercap)) %>% 
+  head(1)
+
+```
+
+The dataset contains information on each country in the sampled year, its continent, life expectancy, population, and GDP per capita.
+
+Let's plot all the countries in 1952.
+```{r 1957}
+theme_set(theme_bw())  # set theme to white background for better visibility
+
+ggplot(data = subset(gapminder, year == 1952), aes(gdpPercap, lifeExp, size = pop)) +
+  geom_point() +
+  scale_x_log10() +
+  ggtitle("1952")
+
+ggplot(subset(gapminder, year == 1952), aes(x = gdpPercap, y = lifeExp, size = pop, color = continent)) +
+  geom_point(alpha = 0.7) +  # Gør punkterne lettere gennemsigtige
+  scale_x_log10(labels = scales::label_comma()) +  # Brug log10 + normale tal på x-aksen
+  scale_size(range = c(2, 10)) +  # Justér boblestørrelser
+  labs(title = "GDP per Capita vs Life Expectancy (1952)", 
+       x = "GDP per Capita (USD)", 
+       y = "Life Expectancy (years)", 
+       size = "Population",
+       color = "Continent")  # Originale labels
+```
+
+...
+
+We see an interesting spread with an outlier to the right. Explore who it is so you can answer question 2 below!
+
+
+Next, you can generate a similar plot for 2007 and compare the differences
+```{r 2007}
+ggplot(subset(gapminder, year == 2007), aes(gdpPercap, lifeExp, size = pop)) +
+  geom_point() +
+  scale_x_log10() +
+  ggtitle("2007")
+
+ggplot(subset(gapminder, year == 2007), aes(x = gdpPercap, y = lifeExp, size = pop, color = continent)) +
+  geom_point(alpha = 0.7) +
+  scale_x_log10(labels = scales::label_comma()) +
+  scale_size(range = c(2, 10)) +
+  labs(title = "GDP per Capita vs Life Expectancy (2007)", 
+       x = "GDP per Capita (USD)", 
+       y = "Life Expectancy (years)", 
+       size = "Population",
+       color = "Continent")
+```
+
+...
+
+
+
+### Questions for the static figures:
+
+1. *Answer: why does it make sense to have a log10 scale (`scale_x_log10()`) on the x axis?* (hint: try to comment it out and observe the result)
+
+Fordi vi har en outlier, så bliver grafen meget meget svær at læse og clustered in, altså kompromeret. Derfor bruger man scale x log
+
+2. *Answer: In Figure 1: Who is the outlier (the richest country in 1952) far right on the x axis?* 
+
+ved at benytte chatgpt fandt jeg frem til formlen.
+gapminder %>% 
+ filter(year== 1952) %>% 
+  arrange(desc(gdpPercap)) %>% 
+  head(1)
+Det gav mig så svaret Kuwait   
+
+
+3. *Fix Figures 1 and 2: Differentiate the **continents** by color, and fix the axis labels and units to be more legible (**Hint**: the 2.50e+08 is so called "scientific notation". You want to eliminate it.)*
+
+Jeg har brugt ChatGPT til dele af følgende, og fundet frem til koden hvorved jeg har fixet grafen
+
+ggplot(subset(gapminder, year == 1952), aes(x = gdpPercap, y = lifeExp, size = pop, color = continent)) +
+  geom_point(alpha = 0.7) +  # Gør punkterne lettere gennemsigtige
+  scale_x_log10(labels = scales::label_comma()) +  # Brug log10 + normale tal på x-aksen
+  scale_size(range = c(2, 10)) +  # Justér boblestørrelser
+  labs(title = "GDP per Capita vs Life Expectancy (1952)", 
+       x = "GDP per Capita (USD)", 
+       y = "Life Expectancy (years)", 
+       size = "Population",
+       color = "Continent")  # Originale labels
+  
+ved figur 2 har jeg brugt denne 
+ggplot(subset(gapminder, year == 2007), aes(x = gdpPercap, y = lifeExp, size = pop, color = continent)) +
+  geom_point(alpha = 0.7) +
+  scale_x_log10(labels = scales::label_comma()) +
+  scale_size(range = c(2, 10)) +
+  labs(title = "GDP per Capita vs Life Expectancy (2007)", 
+       x = "GDP per Capita (USD)", 
+       y = "Life Expectancy (years)", 
+       size = "Population",
+       color = "Continent")
+
+4. *Answer: What are the five richest countries in the world in 2007?*
+
+```{r}
+top5_rigeste <- gapminder %>% 
+  filter(year==2007) %>% 
+  arrange(desc(gdpPercap)) %>% 
+  head(5)
+
+print(top5_rigeste)
+```
+Dette giver mig så svaret på at top 5 rigeste lande er, 1: Norge, 2:Kuwait, 3:Singapore, 4:USA, 5:Irland
+udfra mit datasæt er dette min top 5. 
+
+##  Make it move!
+
+The comparison would be easier if we had the two graphs together, animated. We have a lovely tool in R to do this: the `gganimate` package. Beware that there may be other packages your operating system needs in order to glue interim images into an animation or video. Read the messages when installing the package.
+
+Also, there are *two* ways of animating the gapminder ggplot.
+
+### Option 1: Animate using transition_states() 
+
+The first step is to create the object-to-be-animated
+```{r anim1 start}
+anim <- ggplot(gapminder, aes(gdpPercap, lifeExp, size = pop)) +
+  geom_point() +
+  scale_x_log10()  # convert x to log scale
+anim
+```
+
+...
+
+This plot collates all the points across time. The next step is to split it into years and animate it. This may take some time, depending on the processing power of your computer (and other things you are asking it to do). Beware that the animation might appear in the bottom right 'Viewer' pane, not in this rmd preview. You need to `knit` the document to get the visual inside an html file.
+
+```{r anim1}
+anim + transition_states(year, 
+                      transition_length = 1,
+                      state_length = 1)
+
+```
+...
+
+
+
+### Option 2 Animate using transition_time()
+This option smooths the transition between different 'frames', because it interpolates and adds transitional years where there are gaps in the timeseries data.
+
+```{r anim2}
+anim2 <- ggplot(gapminder, aes(gdpPercap, lifeExp, size = pop)) +
+  geom_point() +
+  scale_x_log10() + # convert x to log scale
+  transition_time(year)
+anim2
+
+
+library(ggplot2)
+library(gganimate)
+library(gapminder)
+library(scales)  # For bedre aksemærkning
+
+theme_set(theme_bw())  # Sæt et rent tema
+
+# Animation med skiftende titel og forbedrede akser
+anim2 <- ggplot(gapminder, aes(gdpPercap, lifeExp, size = pop, color = continent)) +
+  geom_point(alpha = 0.7) +  # Gør boblerne lettere gennemsigtige
+  scale_x_log10(labels = label_comma()) +  # Fjern videnskabelig notation på x-aksen
+  scale_size(range = c(2, 10)) +  # Justér boblestørrelser
+  labs(title = "Year: {frame_time}",  # Dynamisk titel, der ændrer sig med årstallet
+       x = "GDP per Capita (USD)", 
+       y = "Life Expectancy (years)", 
+       size = "Population",
+       color = "Continent") +
+  transition_time(year) +  # Animation med interpolering
+  ease_aes('linear')  # Gør animationen glat
+
+# Kør animationen
+animate(anim2, renderer = gifski_renderer())
+
+```
+
+
+
+### Tasks for the animations:
+
+5. *Can you add a title to one or both of the animations above that will change* 
+ *in sync with the animation?* *(**Hint**: search labeling for `transition_states()` and `transition_time()` functions respectively)*
+
+ChatGPT har hjulpet med at identificere transition_time(). Jeg har fundet frem til følgende svar, som jeg har smidt ind med spørgsmål 3 koden.
+
+library(ggplot2)
+library(gganimate)
+library(gapminder)
+library(scales) 
+
+theme_set(theme_bw()) 
+
+anim2 <- ggplot(gapminder, aes(gdpPercap, lifeExp, size = pop, color = continent)) +
+  geom_point(alpha = 0.7) +  
+  scale_x_log10(labels = label_comma()) +  
+  scale_size(range = c(2, 10)) +  
+  labs(title = "Year: {frame_time}",  
+       x = "GDP per Capita (USD)", 
+       y = "Life Expectancy (years)", 
+       size = "Population",
+       color = "Continent") +
+  transition_time(year) +  
+  ease_aes('linear')
+
+animate(anim2, renderer = gifski_renderer())
+
+Jeg har så fået årstallet til at følge datasættet ved at benytte koden labs(title = "year:{frame_time}") 
+
+6. *Can you made the axes' labels and units more readable? Consider expanding the abbreviated labels as well as the scientific notation in the legend and x axis to whole numbers. Also, differentiate the countries from different continents by color*
+
+```{r}
+library(ggplot2)
+library(gganimate)
+library(gapminder)
+library(scales)  # For bedre aksemærkning
+
+theme_set(theme_bw())  # Sæt et rent tema for bedre synlighed
+
+# Forbedret animation
+anim6 <- ggplot(gapminder, aes(x = gdpPercap, y = lifeExp, size = pop, color = continent)) +
+  geom_point(alpha = 0.7) +  # Let gennemsigtige bobler for bedre synlighed
+  scale_x_log10(labels = scales::label_comma()) + # Fjern videnskabelig notation på x-aksen
+  scale_size_continuous(labels = scales::label_comma()) + #Denne kode fjerner videnskabelig notation for befolkningstallet og viser det som tal med tusind-separatorer
+  labs(title = "Year: {frame_time}",  # Dynamisk titel med årstal
+       x = "GDP per Capita (USD)", 
+       y = "Life Expectancy (years)", 
+       size = "Population",
+       color = "Continent") +
+  theme(
+    legend.position = "right",  # Placerer forklaringen til højre
+    axis.text.x = element_text(angle = 45, hjust = 1),  # Roterer x-aksemærker for bedre læsbarhed
+    axis.text.y = element_text(size = 10),  # Ændrer skriftstørrelse på y-aksen
+    axis.title = element_text(size = 12),  # Ændrer skriftstørrelse på aksetitler
+    legend.title = element_text(size = 12),  # Ændrer skriftstørrelse på legenden
+    legend.text = element_text(size = 10)  # Ændrer skriftstørrelse på tekst i legenden
+  ) +
+  transition_time(year) +  # Animation over tid
+  ease_aes('linear')  # Glidende overgang
+
+# Kør animationen
+animate(anim6, renderer = gifski_renderer())
+
+```
+
+### Final Question
+7. **Is the world a better place today than it was in the year you were born?** *Answer this question using the gapminder data.  Define better either as more prosperous, more free, more healthy, or suggest another measure that you can get from gapminder. Submit a 250 word answer with an illustration to Brightspace. Include a URL in your Brightspace submission that links to the coded solutions in Github. [Hint: if you wish to have more data than is in the filtered gapminder, you can load either the `gapminder_unfiltered` dataset or download more historical data at https://www.gapminder.org/data/ ]*
+
+Ved hjælp af ChatGPT
+```{r}
+library(ggplot2)
+library(dplyr)
+library(gapminder)
+
+# Filtrér data fra 2002 og 2007
+data_comparison <- gapminder %>%
+  filter(year %in% c(2002, 2007))
+
+# Lav et sammenligningsplot
+ggplot(data_comparison, aes(x = gdpPercap, y = lifeExp, color = continent)) +
+  geom_point(aes(size = pop), alpha = 0.7) +
+  scale_x_log10(labels = scales::label_comma()) +
+  scale_size_continuous(labels = scales::label_comma()) + 
+  labs(title = "Comparison of 2002 and 2007",
+       x = "GDP per Capita (USD)", y = "Life Expectancy (Years)",
+       color = "Continent", size = "Population") +
+  facet_wrap(~year) +  # Opdel i to grafer (et for hvert år)
+  theme_minimal()
+```
+```{r}
+data_2007 <- gapminder %>% 
+  filter(year == 2002) %>%
+  summarise(avg_gdp = mean(gdpPercap, na.rm = TRUE),
+            avg_lifeExp = mean(lifeExp, na.rm = TRUE),
+            total_pop = sum(pop, na.rm = TRUE))
+
+print(data_2007)
+
+data_2007 <- gapminder %>% 
+  filter(year == 2007) %>%
+  summarise(avg_gdp = mean(gdpPercap, na.rm = TRUE),
+            avg_lifeExp = mean(lifeExp, na.rm = TRUE),
+            total_pop = sum(pop, na.rm = TRUE))
+
+print(data_2007)
+```
+
+Man kan så se at den generelle gdp er steget, så det generelle output pr person er steget, hvilket vil sige at man har fået flere penge mellem hænderne. Derudover kan man også se på den generelle levealder, hvor ud fra datasættet stiger med knap 1.5 år, hvilket er en stor forskel iforhold til hvis man kigger på tallene fra 1997 til 2002, hvor stigningen kun er 0.68 år. Dette viser at der er en stor udvikling i at mennesket lever længere generelt i verdenen. Til slut kan man så også se at befolkningstallet også er steget, hvilket giver mening i forhold til vi er blevet rigere og lever længere, hvilket giver god grund til hvorfor vi så bliver flere.
+Dog er uligheden stadig en udfordring. Mens nogle lande har oplevet stor vækst, er andre blevet efterladt, især i dele af Afrika, hvor økonomisk fremgang har været langsommere.
+Samlet set viser dataene, at verden i 2007 var rigere og sundere end i 2002. Der er stadig problemer, men udviklingen går i den rigtige retning.
+
